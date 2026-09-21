@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Rect as ComposeRect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
@@ -40,13 +41,24 @@ import kotlinx.coroutines.delay
 
 val ByeSmoSplashBackground = Color(0xFF292D32)
 
+// Scale all RGB channels equally: increase brightness without changing hue
+// or saturation. The bottom remains the original graphite shade.
+private const val BackgroundTopBrightness = 1.8f
+private val ByeSmoSplashBackgroundTop = ByeSmoSplashBackground.copy(
+    red = ByeSmoSplashBackground.red * BackgroundTopBrightness,
+    green = ByeSmoSplashBackground.green * BackgroundTopBrightness,
+    blue = ByeSmoSplashBackground.blue * BackgroundTopBrightness,
+)
+private val ByeSmoSplashBackgroundGradient = Brush.verticalGradient(
+    colors = listOf(ByeSmoSplashBackgroundTop, ByeSmoSplashBackground),
+)
+
 private const val WordmarkScale = 0.8f
 
 /**
  * Full-window first screen, drawn inside the real launcher Activity.
- * Single button image contains housing, filter engraving (20 dots in 3-2-3-2-3-2-3-2 columns),
- * red power sign, and enhanced soft shadow.
- * Background is strictly solid #292D32 without halo or extra layers.
+ * The background is a full-height procedural graphite gradient:
+ * lighter at the top, with the original #292D32 at the bottom.
  */
 @Composable
 fun ByeSmoSplashScreen(
@@ -79,7 +91,7 @@ fun ByeSmoSplashScreen(
         }
     }
 
-    Box(modifier.fillMaxSize().background(ByeSmoSplashBackground)) {
+    Box(modifier.fillMaxSize().background(ByeSmoSplashBackgroundGradient)) {
         // Both system splash and Compose splash use full window coordinates.
         BoxWithConstraints(
             Modifier.fillMaxSize(),
