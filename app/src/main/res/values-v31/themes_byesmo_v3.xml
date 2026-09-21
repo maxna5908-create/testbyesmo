@@ -3,7 +3,7 @@
 <resources>
     <style name="Theme.ByeSmoV3.Starting" parent="Theme.ByeSmoV3.Starting.Base">
         <item name="android:windowSplashScreenBackground">@color/byesmo_v3_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/byesmo_system_button_v4</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/byesmo_splash_icon</item>
         <item name="android:windowBackground">@color/byesmo_v3_background</item>
     </style>
 </resources>

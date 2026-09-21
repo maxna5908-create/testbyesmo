@@ -72,18 +72,13 @@ fun ByeSmoSplashScreen(
     modifier: Modifier = Modifier,
     onButtonPositioned: ((ComposeRect) -> Unit)? = null,
 ) {
-    val logoAlpha = remember { Animatable(if (introReady) 1f else 0f) }
     val captionAlpha = remember { Animatable(if (introReady) 1f else 0f) }
 
     LaunchedEffect(introReady, animationsEnabled) {
         if (!introReady) return@LaunchedEffect
         if (!animationsEnabled) {
-            logoAlpha.snapTo(1f)
             captionAlpha.snapTo(1f)
         } else {
-            if (logoAlpha.value < 1f) {
-                logoAlpha.animateTo(1f, tween(180))
-            }
             if (captionAlpha.value < 1f) {
                 delay(40)
             }
@@ -91,61 +86,41 @@ fun ByeSmoSplashScreen(
         }
     }
 
-    Box(modifier.fillMaxSize().background(ByeSmoSplashBackgroundGradient)) {
-        // Both system splash and Compose splash use full window coordinates.
-        BoxWithConstraints(
-            Modifier.fillMaxSize(),
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(ByeSmoSplashBackground),
+    ) {
+        // Brand logo placed in the exact center (vertical and horizontal),
+        // matching the system splash screen position with zero transformation.
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(288.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            val scale = minOf(
-                maxWidth.value / 360f,
-                1.08f,
-                (maxHeight.value - 32f) / 342f,
-            ).coerceAtLeast(0.01f)
-            val baseWordmarkWidth = 232f * scale
-            val baseWordmarkHeight = 69.6f * scale
-            val wordmarkWidth = baseWordmarkWidth * WordmarkScale
-            val wordmarkHeight = baseWordmarkHeight * WordmarkScale
-            // Supplied 1200x360 PNG: visible non-transparent bounds x=[18,1180).
-            // Width is 1162/1200; center offset is -1/1200.
-            val visibleWordmarkWidth = wordmarkWidth * 1162f / 1200f
-            val visibleWordmarkCenterOffset = -wordmarkWidth / 1200f
-            val captionBoxHeight = 26.4f * scale * WordmarkScale
+            Image(
+                painter = painterResource(wordmarkResource),
+                contentDescription = "byesmo",
+                modifier = Modifier.size(288.dp),
+            )
+        }
 
-            // Centered vertically and horizontally:
-            Column(
-                modifier = Modifier.align(Alignment.Center),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                // Brand logo slot reserved: displays at 80% (20% smaller) centered in place.
-                Box(
-                    modifier = Modifier.size(baseWordmarkWidth.dp, baseWordmarkHeight.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Image(
-                        painter = painterResource(wordmarkResource),
-                        contentDescription = "byesmo",
-                        contentScale = ContentScale.Fit,
-                        alpha = logoAlpha.value,
-                        modifier = Modifier.size(wordmarkWidth.dp, wordmarkHeight.dp),
-                    )
-                }
-                Spacer(Modifier.height((10f * scale).dp))
-                // Tagline slot reserved: fitted to the 80% visible wordmark width, strictly white.
-                Box(
-                    modifier = Modifier.size(baseWordmarkWidth.dp, (26.4f * scale).dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    FittedTagline(
-                        value = tagline,
-                        typeface = captionTypeface,
-                        alpha = captionAlpha.value,
-                        modifier = Modifier
-                            .offset(x = visibleWordmarkCenterOffset.dp)
-                            .width(visibleWordmarkWidth.dp)
-                            .height(captionBoxHeight.dp),
-                    )
-                }
-            }
+        // Tagline positioned directly below the centered brand logo.
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = 45.5.dp)
+                .width(146.dp)
+                .height(22.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            FittedTagline(
+                value = tagline,
+                typeface = captionTypeface,
+                alpha = captionAlpha.value,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }

@@ -71,7 +71,7 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme {
                 ByeSmoSplashScreen(
                     buttonResource = R.drawable.byesmo_button_v3,
-                    wordmarkResource = R.drawable.byesmo_splash_wordmark,
+                    wordmarkResource = R.drawable.byesmo_splash_icon,
                     tagline = stringResource(R.string.byesmo_v3_tagline),
                     captionTypeface = captionTypeface,
                     introReady = introReady,
