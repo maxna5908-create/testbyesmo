@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/byesmo_splash_fade_start">
+    <target android:name="brand_red" android:animation="@animator/byesmo_brand_fade_in"/>
+    <target android:name="brand_white" android:animation="@animator/byesmo_brand_fade_in"/>
+</animated-vector>

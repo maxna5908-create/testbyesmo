@@ -1,7 +1,13 @@
 package com.example
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
+import android.graphics.RectF
 import android.graphics.Typeface
+import android.view.ViewGroup
+import android.view.animation.PathInterpolator
+import android.widget.ImageView
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -15,26 +21,26 @@ import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.view.doOnLayout
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.splashscreen.SplashScreenViewProvider
 import com.byesmo.splashfix.ByeSmoSplashScreen
 import com.byesmo.splashfix.configureByeSmoSplashWindow
-import com.example.splash.SplashAlignmentMath
 import com.example.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
     private var introReady by mutableStateOf(false)
-    private var buttonSideDp by mutableStateOf(192f)
-    private var targetButtonBounds: ComposeRect? = null
+    private var targetWordmarkBounds: ComposeRect? = null
     private var pendingSplashProvider: SplashScreenViewProvider? = null
-    private var animationsEnabled: Boolean = true
+    private var animationsEnabled = true
+    private var transitionAnimator: ValueAnimator? = null
     private var fallbackRunnable: Runnable? = null
+    private var fadeWaitRunnable: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val systemSplash = installSplashScreen() // MUST be called BEFORE super.onCreate
+        val systemSplash = installSplashScreen()
         super.onCreate(savedInstanceState)
-
-        configureByeSmoSplashWindow() // BEFORE setContent / first app frame
+        configureByeSmoSplashWindow()
 
         animationsEnabled = if (Build.VERSION.SDK_INT >= 26) {
             ValueAnimator.areAnimatorsEnabled()
@@ -43,26 +49,9 @@ class MainActivity : ComponentActivity() {
                 contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f,
             ) > 0f
         }
-
-        // On Activity recreation without an OS starting window, signal readiness immediately.
-        if (savedInstanceState != null) {
-            introReady = true
-        } else {
-            val fallback = Runnable {
-                pendingSplashProvider?.let { provider ->
-                    pendingSplashProvider = null
-                    provider.remove()
-                    configureByeSmoSplashWindow()
-                    introReady = true
-                }
-            }
-            fallbackRunnable = fallback
-            window.decorView.postDelayed(fallback, 600L)
-
-            systemSplash.setOnExitAnimationListener { provider ->
-                handleSplashExit(provider)
-            }
-        }
+        // Do not replay the intro when Android recreates this Activity.
+        introReady = savedInstanceState != null
+        systemSplash.setOnExitAnimationListener(::handleSplashExit)
 
         val captionTypeface = ResourcesCompat.getFont(this, R.font.byesmo_splash_font)
             ?: Typeface.create("sans-serif", Typeface.NORMAL)
@@ -70,15 +59,14 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyApplicationTheme {
                 ByeSmoSplashScreen(
-                    buttonResource = R.drawable.byesmo_button_v3,
                     wordmarkResource = R.drawable.byesmo_splash_icon,
                     tagline = stringResource(R.string.byesmo_v3_tagline),
                     captionTypeface = captionTypeface,
                     introReady = introReady,
                     animationsEnabled = animationsEnabled,
-                    buttonSideDp = buttonSideDp,
-                    onButtonPositioned = { bounds ->
-                        onButtonPositioned(bounds)
+                    onWordmarkPositioned = { bounds ->
+                        targetWordmarkBounds = bounds
+                        tryStartTransition()
                     },
                 )
             }
@@ -86,119 +74,146 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleSplashExit(provider: SplashScreenViewProvider) {
-        if (isFinishing || isDestroyed) return
-        fallbackRunnable?.let {
-            window.decorView.removeCallbacks(it)
-            fallbackRunnable = null
-        }
-        provider.remove()
-        configureByeSmoSplashWindow()
-        introReady = true
-    }
-
-    private fun onButtonPositioned(bounds: ComposeRect) {
-        targetButtonBounds = bounds
-        val provider = pendingSplashProvider
-        if (provider != null) {
-            pendingSplashProvider = null
-            executeTransition(provider, bounds)
-        }
-    }
-
-    private fun executeTransition(
-        provider: SplashScreenViewProvider,
-        targetBounds: ComposeRect,
-    ) {
-        fallbackRunnable?.let {
-            window.decorView.removeCallbacks(it)
-            fallbackRunnable = null
-        }
-
-        val iconView = provider.iconView
-        if (iconView == null) {
+        if (isFinishing || isDestroyed) {
             provider.remove()
+            return
+        }
+        pendingSplashProvider = provider
+        if (introReady || !animationsEnabled) {
+            finishSplash()
+            return
+        }
+
+        // Start the watchdog only after the OS hands us the overlay.
+        // It bounds a missing-layout/OEM failure, not the app's loading time.
+        val fallback = Runnable { finishSplash() }
+        fallbackRunnable = fallback
+        window.decorView.postDelayed(fallback, 1000L)
+        // On a fast startup, let the system AVD finish its 200ms fade before resizing.
+        val remainingFade = if (Build.VERSION.SDK_INT >= 31 && provider.iconAnimationStartMillis > 0L) {
+            (provider.iconAnimationStartMillis + provider.iconAnimationDurationMillis -
+                System.currentTimeMillis()).coerceIn(0L, 200L)
+        } else {
+            0L
+        }
+        if (remainingFade > 0L) {
+            val resume = Runnable {
+                fadeWaitRunnable = null
+                tryStartTransition()
+            }
+            fadeWaitRunnable = resume
+            window.decorView.postDelayed(resume, remainingFade)
+        }
+        provider.iconView.doOnLayout { tryStartTransition() }
+        tryStartTransition()
+    }
+
+    private fun tryStartTransition() {
+        val provider = pendingSplashProvider ?: return
+        val target = targetWordmarkBounds ?: return
+        if (transitionAnimator != null || fadeWaitRunnable != null || isFinishing || isDestroyed) return
+        val icon = provider.iconView
+        if (icon.width <= 0 || icon.height <= 0 || target.width <= 0f) return
+
+        // iconView is an ImageView on standard Android. Respect its actual
+        // drawable matrix and padding instead of assuming a fixed pixel size.
+        val canvas = RectF(0f, 0f, icon.width.toFloat(), icon.height.toFloat())
+        if (icon is ImageView) {
+            val drawable = icon.drawable
+            if (drawable != null && !drawable.bounds.isEmpty) {
+                canvas.set(drawable.bounds)
+                icon.imageMatrix.mapRect(canvas)
+                canvas.offset(icon.paddingLeft.toFloat(), icon.paddingTop.toFloat())
+            }
+        }
+        val canvasSide = minOf(canvas.width(), canvas.height())
+        if (canvasSide <= 0f) {
+            finishSplash()
+            return
+        }
+
+        // Animate the system view itself. Unclip its ancestors so the enlarged
+        // wordmark is not cut off by the original icon slot.
+        icon.clipToOutline = false
+        var ancestor = icon.parent
+        while (ancestor is ViewGroup) {
+            ancestor.clipChildren = false
+            ancestor.clipToPadding = false
+            ancestor.clipToOutline = false
+            if (ancestor === provider.view) break
+            ancestor = ancestor.parent
+        }
+
+        val iconLocation = IntArray(2)
+        icon.getLocationOnScreen(iconLocation)
+        val windowLocation = IntArray(2)
+        window.decorView.getLocationOnScreen(windowLocation)
+        val dx = windowLocation[0] + target.center.x -
+            (iconLocation[0] + canvas.centerX())
+        val dy = windowLocation[1] + target.center.y -
+            (iconLocation[1] + canvas.centerY())
+        val endScale = target.width / canvasSide
+
+        icon.pivotX = canvas.centerX()
+        icon.pivotY = canvas.centerY()
+        val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 260L
+            interpolator = PathInterpolator(0.4f, 0f, 0.2f, 1f)
+            addUpdateListener { animation ->
+                val progress = animation.animatedValue as Float
+                val scale = 1f + (endScale - 1f) * progress
+                icon.scaleX = scale
+                icon.scaleY = scale
+                icon.translationX = dx * progress
+                icon.translationY = dy * progress
+            }
+            addListener(object : AnimatorListenerAdapter() {
+                override fun onAnimationEnd(animation: Animator) {
+                    // Keep the final system frame visible until it is removed.
+                    // Compose already has the exact same final logo underneath.
+                    finishSplash()
+                }
+            })
+        }
+        transitionAnimator = animator
+        animator.start()
+    }
+
+    private fun finishSplash() {
+        val provider = pendingSplashProvider ?: return
+        pendingSplashProvider = null
+        fallbackRunnable?.let { window.decorView.removeCallbacks(it) }
+        fallbackRunnable = null
+        fadeWaitRunnable?.let { window.decorView.removeCallbacks(it) }
+        fadeWaitRunnable = null
+        transitionAnimator?.apply {
+            removeAllListeners()
+            removeAllUpdateListeners()
+            cancel()
+        }
+        transitionAnimator = null
+        provider.remove()
+        if (!isFinishing && !isDestroyed) {
             configureByeSmoSplashWindow()
             introReady = true
-            return
         }
+    }
 
-        (provider.view as? android.view.ViewGroup)?.clipChildren = false
-        (provider.view as? android.view.ViewGroup)?.clipToPadding = false
-        (iconView.parent as? android.view.ViewGroup)?.clipChildren = false
-        (iconView.parent as? android.view.ViewGroup)?.clipToPadding = false
-
-        if (iconView.width <= 0 || iconView.height <= 0) {
-            iconView.post {
-                executeTransition(provider, targetBounds)
-            }
-            return
+    override fun onDestroy() {
+        // Remove listeners before cancelling, so teardown cannot start the caption.
+        transitionAnimator?.apply {
+            removeAllListeners()
+            removeAllUpdateListeners()
+            cancel()
         }
-
-        val targetImageView = when (iconView) {
-            is android.widget.ImageView -> iconView
-            is android.view.ViewGroup -> {
-                var found: android.widget.ImageView? = null
-                for (i in 0 until iconView.childCount) {
-                    val child = iconView.getChildAt(i)
-                    if (child is android.widget.ImageView) {
-                        found = child
-                        break
-                    }
-                }
-                found
-            }
-            else -> null
-        }
-
-        val drawable = targetImageView?.drawable ?: (iconView as? android.widget.ImageView)?.drawable
-        val bounds = drawable?.bounds ?: android.graphics.Rect(0, 0, iconView.width, iconView.height)
-        val matrix = targetImageView?.imageMatrix ?: (iconView as? android.widget.ImageView)?.imageMatrix ?: android.graphics.Matrix()
-
-        val srcRect = android.graphics.RectF(
-            bounds.left.toFloat(),
-            bounds.top.toFloat(),
-            bounds.right.toFloat(),
-            bounds.bottom.toFloat()
-        )
-        if (srcRect.isEmpty) {
-            srcRect.set(0f, 0f, iconView.width.toFloat(), iconView.height.toFloat())
-        }
-        val dstRect = android.graphics.RectF()
-        matrix.mapRect(dstRect, srcRect)
-
-        val renderedSystemCanvasSidePx = if (dstRect.width() > 0f && dstRect.height() > 0f) {
-            minOf(dstRect.width(), dstRect.height())
-        } else {
-            minOf(iconView.width.toFloat(), iconView.height.toFloat())
-        }
-
-        val iconScreenLoc = IntArray(2)
-        (targetImageView ?: iconView).getLocationOnScreen(iconScreenLoc)
-        val systemCenterX = iconScreenLoc[0] + dstRect.centerX()
-        val systemCenterY = iconScreenLoc[1] + dstRect.centerY()
-
-        val windowScreenLoc = IntArray(2)
-        window.decorView.getLocationOnScreen(windowScreenLoc)
-        val targetCenterX = windowScreenLoc[0] + targetBounds.left + targetBounds.width / 2f
-        val targetCenterY = windowScreenLoc[1] + targetBounds.top + targetBounds.height / 2f
-
-        val targetMath = SplashAlignmentMath.target(
-            renderedSystemCanvasSidePx = renderedSystemCanvasSidePx,
-            systemButtonCenterXScreenPx = systemCenterX,
-            systemButtonCenterYScreenPx = systemCenterY,
-        )
-
-        val density = resources.displayMetrics.density
-        val measuredSideDp = SplashAlignmentMath.pixelsToDp(targetMath.imageSide, density)
-        if (kotlin.math.abs(buttonSideDp - measuredSideDp) > 0.5f) {
-            buttonSideDp = measuredSideDp
-        }
-
-        // Layout is confirmed ready and UI button center/size match the system button.
-        // Remove system overlay immediately without any translation, scale or alpha animations.
-        provider.remove()
-        configureByeSmoSplashWindow()
-        introReady = true
+        transitionAnimator = null
+        fallbackRunnable?.let { window.decorView.removeCallbacks(it) }
+        fallbackRunnable = null
+        fadeWaitRunnable?.let { window.decorView.removeCallbacks(it) }
+        fadeWaitRunnable = null
+        pendingSplashProvider?.remove()
+        pendingSplashProvider = null
+        super.onDestroy()
     }
 }
 

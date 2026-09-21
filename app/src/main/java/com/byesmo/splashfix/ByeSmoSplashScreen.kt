@@ -6,7 +6,6 @@ import android.graphics.Typeface
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -24,12 +23,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
@@ -57,7 +58,6 @@ private const val SystemWordmarkCanvasDp = 288f
 private const val WordmarkVisibleWidthDp = 145.16869f
 private const val WordmarkVisibleCenterXDp = 143.86113f
 private const val WordmarkVisibleBottomDp = 163.75929f
-private const val BrandResizeDurationMs = 260
 private const val CaptionRevealDurationMs = 450
 
 /**
@@ -74,24 +74,19 @@ fun ByeSmoSplashScreen(
     animationsEnabled: Boolean = true,
     buttonSideDp: Float = 192f,
     modifier: Modifier = Modifier,
+    onWordmarkPositioned: ((ComposeRect) -> Unit)? = null,
     onButtonPositioned: ((ComposeRect) -> Unit)? = null,
 ) {
     // Recreation and previews start in the final state. A cold/warm launch
     // waits for MainActivity to remove the system splash and set introReady.
-    val brandProgress = remember { Animatable(if (introReady) 1f else 0f) }
     val revealProgress = remember { Animatable(if (introReady) 1f else 0f) }
 
     LaunchedEffect(introReady, animationsEnabled) {
         if (!introReady) return@LaunchedEffect
         if (!animationsEnabled) {
-            brandProgress.snapTo(1f)
             revealProgress.snapTo(1f)
         } else {
-            // Sequential: finish resizing, then gently reveal the caption.
-            brandProgress.animateTo(
-                1f,
-                tween(BrandResizeDurationMs, easing = FastOutSlowInEasing),
-            )
+            // The system overlay has already resized the logo. Only reveal the caption.
             revealProgress.animateTo(
                 1f,
                 tween(
@@ -105,11 +100,27 @@ fun ByeSmoSplashScreen(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(ByeSmoSplashBackground),
+            .background(ByeSmoSplashBackground)
+            .onGloballyPositioned { coordinates ->
+                if (coordinates.isAttached) {
+                    // Report the full, un-clipped final vector canvas in window pixels.
+                    // It can be wider than the window because the vector has transparent padding.
+                    val center = coordinates.localToWindow(
+                        Offset(coordinates.size.width / 2f, coordinates.size.height / 2f),
+                    )
+                    val side = coordinates.size.width * 0.6f *
+                        SystemWordmarkCanvasDp / WordmarkVisibleWidthDp
+                    onWordmarkPositioned?.invoke(
+                        ComposeRect(
+                            center.x - side / 2f, center.y - side / 2f,
+                            center.x + side / 2f, center.y + side / 2f,
+                        ),
+                    )
+                }
+            },
     ) {
         val brandWidth = maxWidth * 0.6f
         val targetScale = brandWidth.value / WordmarkVisibleWidthDp
-        val brandScale = 1f + (targetScale - 1f) * brandProgress.value
         val captionHeight = brandWidth * 0.16f
         val captionCenterX = ((WordmarkVisibleCenterXDp - SystemWordmarkCanvasDp / 2f) * targetScale).dp
         val captionCenterY = ((WordmarkVisibleBottomDp - SystemWordmarkCanvasDp / 2f) * targetScale).dp +
@@ -125,8 +136,8 @@ fun ByeSmoSplashScreen(
             )
         }
 
-        // Keep the system icon's original canvas and center for the first frame.
-        // Render-layer scaling avoids constraining its transparent padding to screen width.
+        // Already at the final size under the system overlay, so removing it cannot
+        // restart the logo animation. Only the caption animates in Compose.
         Image(
             painter = painterResource(wordmarkResource),
             contentDescription = "byesmo",
@@ -135,8 +146,8 @@ fun ByeSmoSplashScreen(
                 .align(Alignment.Center)
                 .requiredSize(SystemWordmarkCanvasDp.dp)
                 .graphicsLayer {
-                    scaleX = brandScale
-                    scaleY = brandScale
+                    scaleX = targetScale
+                    scaleY = targetScale
                 },
         )
 
