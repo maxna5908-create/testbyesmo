@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.example.splash.SplashAlignmentMath
 import kotlinx.coroutines.delay
 
-val ByeSmoSplashBackground = Color(0xFF132B53)
+val ByeSmoSplashBackground = Color(0xFF292D32)
 
 private const val WordmarkScale = 0.8f
 
@@ -46,7 +46,7 @@ private const val WordmarkScale = 0.8f
  * Full-window first screen, drawn inside the real launcher Activity.
  * Single button image contains housing, filter engraving (20 dots in 3-2-3-2-3-2-3-2 columns),
  * red power sign, and enhanced soft shadow.
- * Background is strictly solid #132B53 without halo or extra layers.
+ * Background is strictly solid #292D32 without halo or extra layers.
  */
 @Composable
 fun ByeSmoSplashScreen(

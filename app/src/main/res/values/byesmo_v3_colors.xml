@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="byesmo_v3_background">#132B53</color>
+    <color name="byesmo_v3_background">#292D32</color>
     <color name="byesmo_v3_red">#FF2B3D</color>
     <color name="byesmo_v3_tagline">#FFFFFF</color>
 </resources>

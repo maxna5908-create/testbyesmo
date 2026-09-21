@@ -31,7 +31,7 @@ fun ComponentActivity.configureByeSmoSplashWindow() {
         window.navigationBarColor = Color.TRANSPARENT
     }
     WindowCompat.getInsetsController(window, window.decorView).apply {
-        // false means white/light system icons, suitable for our navy background.
+        // false means white/light system icons, suitable for our graphite background.
         isAppearanceLightStatusBars = false
         isAppearanceLightNavigationBars = false
     }
