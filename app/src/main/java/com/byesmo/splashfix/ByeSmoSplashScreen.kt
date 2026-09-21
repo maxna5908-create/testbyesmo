@@ -5,18 +5,17 @@ import android.graphics.Rect
 import android.graphics.Typeface
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,17 +26,14 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Rect as ComposeRect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.boundsInWindow
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
-import com.example.splash.SplashAlignmentMath
-import kotlinx.coroutines.delay
 
 val ByeSmoSplashBackground = Color(0xFF292D32)
 
@@ -53,7 +49,14 @@ private val ByeSmoSplashBackgroundGradient = Brush.verticalGradient(
     colors = listOf(ByeSmoSplashBackgroundTop, ByeSmoSplashBackground),
 )
 
-private const val WordmarkScale = 0.8f
+// Visible path bounds in byesmo_splash_icon.xml's 288 x 288 viewport.
+// Transparent padding is excluded when calculating the requested 50% width.
+private const val SystemWordmarkCanvasDp = 288f
+private const val WordmarkVisibleWidthDp = 145.16869f
+private const val WordmarkVisibleCenterXDp = 143.86113f
+private const val WordmarkVisibleBottomDp = 163.75929f
+private const val BrandResizeDurationMs = 260
+private const val CaptionRevealDurationMs = 200
 
 /**
  * Full-window first screen, drawn inside the real launcher Activity.
@@ -72,56 +75,73 @@ fun ByeSmoSplashScreen(
     modifier: Modifier = Modifier,
     onButtonPositioned: ((ComposeRect) -> Unit)? = null,
 ) {
-    val captionAlpha = remember { Animatable(if (introReady) 1f else 0f) }
+    // Recreation and previews start in the final state. A cold/warm launch
+    // waits for MainActivity to remove the system splash and set introReady.
+    val brandProgress = remember { Animatable(if (introReady) 1f else 0f) }
+    val revealProgress = remember { Animatable(if (introReady) 1f else 0f) }
 
     LaunchedEffect(introReady, animationsEnabled) {
         if (!introReady) return@LaunchedEffect
         if (!animationsEnabled) {
-            captionAlpha.snapTo(1f)
+            brandProgress.snapTo(1f)
+            revealProgress.snapTo(1f)
         } else {
-            if (captionAlpha.value < 1f) {
-                delay(40)
-            }
-            captionAlpha.animateTo(1f, tween(180))
+            // Sequential: finish resizing, then reveal caption and gradient together.
+            brandProgress.animateTo(
+                1f,
+                tween(BrandResizeDurationMs, easing = FastOutSlowInEasing),
+            )
+            revealProgress.animateTo(1f, tween(CaptionRevealDurationMs))
         }
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(ByeSmoSplashBackground),
     ) {
-        // Brand logo placed in the exact center (vertical and horizontal),
-        // matching the system splash screen position with zero transformation.
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(288.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(wordmarkResource),
-                contentDescription = "byesmo",
-                modifier = Modifier.size(288.dp),
-            )
-        }
+        val brandWidth = maxWidth * 0.5f
+        val targetScale = brandWidth.value / WordmarkVisibleWidthDp
+        val brandScale = 1f + (targetScale - 1f) * brandProgress.value
+        val captionHeight = brandWidth * 0.16f
+        val captionCenterX = ((WordmarkVisibleCenterXDp - SystemWordmarkCanvasDp / 2f) * targetScale).dp
+        val captionCenterY = ((WordmarkVisibleBottomDp - SystemWordmarkCanvasDp / 2f) * targetScale).dp +
+            12.dp + captionHeight / 2f
 
-        // Tagline positioned directly below the centered brand logo.
+        // Procedural gradient on top of the same solid color as the system splash.
+        // Sharing one progress value keeps its appearance synchronized with the caption.
         Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer { alpha = revealProgress.value }
+                .background(ByeSmoSplashBackgroundGradient),
+        )
+
+        // Keep the system icon's original canvas and center for the first frame.
+        // Render-layer scaling avoids constraining its transparent padding to screen width.
+        Image(
+            painter = painterResource(wordmarkResource),
+            contentDescription = "byesmo",
+            contentScale = ContentScale.Fit,
             modifier = Modifier
                 .align(Alignment.Center)
-                .offset(y = 45.5.dp)
-                .width(146.dp)
-                .height(22.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            FittedTagline(
-                value = tagline,
-                typeface = captionTypeface,
-                alpha = captionAlpha.value,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
+                .requiredSize(SystemWordmarkCanvasDp.dp)
+                .graphicsLayer {
+                    scaleX = brandScale
+                    scaleY = brandScale
+                },
+        )
+
+        FittedTagline(
+            value = tagline,
+            typeface = captionTypeface,
+            alpha = revealProgress.value,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(x = captionCenterX, y = captionCenterY)
+                .width(brandWidth)
+                .height(captionHeight),
+        )
     }
 }
 
@@ -150,7 +170,7 @@ fun FittedTagline(
     Canvas(
         modifier = modifier
             .alpha(alpha)
-            .semantics { text = AnnotatedString(value) },
+            .semantics { if (alpha > 0f) text = AnnotatedString(value) },
     ) {
         if (value.isNotEmpty() && size.width > 0f && size.height > 0f) {
             paint.textSize = 1000f
