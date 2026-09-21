@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Legacy starting window. The bitmap has a density-correct 288dp canvas
+     and already contains its transparent padding. Do not use the nodpi UI PNG. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/byesmo_v3_background"/>
+    <item>
+        <bitmap android:src="@drawable/byesmo_system_button_v4"
+            android:gravity="center" android:tileMode="disabled"
+            android:filter="true" android:antialias="true"/>
+    </item>
+</layer-list>

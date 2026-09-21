@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">byesmo</string>
+    <string name="tagline">выключи тягу курить</string>
+    <string name="power_button_cd">Кнопка выключения тяги курить</string>
+</resources>

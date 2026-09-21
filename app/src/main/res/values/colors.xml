@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="system_background">#132B53</color>
+    <color name="power_on">#FF2B3D</color>
+    <color name="power_off">#627595</color>
+    <color name="wordmark_bye">#FF2B3D</color>
+    <color name="wordmark_smo">#F7FAFF</color>
+    <color name="tagline">#B9CEFF</color>
+    <color name="border">#5579C7</color>
+</resources>
