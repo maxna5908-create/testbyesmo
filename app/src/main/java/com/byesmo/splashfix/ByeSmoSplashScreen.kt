@@ -5,6 +5,7 @@ import android.graphics.Rect
 import android.graphics.Typeface
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -39,6 +40,7 @@ val ByeSmoSplashBackground = Color(0xFF292D32)
 
 // Scale all RGB channels equally: increase brightness without changing hue
 // or saturation. The bottom remains the original graphite shade.
+private const val EnableSplashGradient = false
 private const val BackgroundTopBrightness = 1.8f
 private val ByeSmoSplashBackgroundTop = ByeSmoSplashBackground.copy(
     red = ByeSmoSplashBackground.red * BackgroundTopBrightness,
@@ -50,18 +52,17 @@ private val ByeSmoSplashBackgroundGradient = Brush.verticalGradient(
 )
 
 // Visible path bounds in byesmo_splash_icon.xml's 288 x 288 viewport.
-// Transparent padding is excluded when calculating the requested 50% width.
+// Transparent padding is excluded when calculating the requested 60% width.
 private const val SystemWordmarkCanvasDp = 288f
 private const val WordmarkVisibleWidthDp = 145.16869f
 private const val WordmarkVisibleCenterXDp = 143.86113f
 private const val WordmarkVisibleBottomDp = 163.75929f
 private const val BrandResizeDurationMs = 260
-private const val CaptionRevealDurationMs = 200
+private const val CaptionRevealDurationMs = 450
 
 /**
  * Full-window first screen, drawn inside the real launcher Activity.
- * The background is a full-height procedural graphite gradient:
- * lighter at the top, with the original #292D32 at the bottom.
+ * Solid graphite background; the optional procedural gradient is disabled for now.
  */
 @Composable
 fun ByeSmoSplashScreen(
@@ -86,12 +87,18 @@ fun ByeSmoSplashScreen(
             brandProgress.snapTo(1f)
             revealProgress.snapTo(1f)
         } else {
-            // Sequential: finish resizing, then reveal caption and gradient together.
+            // Sequential: finish resizing, then gently reveal the caption.
             brandProgress.animateTo(
                 1f,
                 tween(BrandResizeDurationMs, easing = FastOutSlowInEasing),
             )
-            revealProgress.animateTo(1f, tween(CaptionRevealDurationMs))
+            revealProgress.animateTo(
+                1f,
+                tween(
+                    CaptionRevealDurationMs,
+                    easing = CubicBezierEasing(0.42f, 0f, 0.58f, 1f),
+                ),
+            )
         }
     }
 
@@ -100,7 +107,7 @@ fun ByeSmoSplashScreen(
             .fillMaxSize()
             .background(ByeSmoSplashBackground),
     ) {
-        val brandWidth = maxWidth * 0.5f
+        val brandWidth = maxWidth * 0.6f
         val targetScale = brandWidth.value / WordmarkVisibleWidthDp
         val brandScale = 1f + (targetScale - 1f) * brandProgress.value
         val captionHeight = brandWidth * 0.16f
@@ -108,14 +115,15 @@ fun ByeSmoSplashScreen(
         val captionCenterY = ((WordmarkVisibleBottomDp - SystemWordmarkCanvasDp / 2f) * targetScale).dp +
             12.dp + captionHeight / 2f
 
-        // Procedural gradient on top of the same solid color as the system splash.
-        // Sharing one progress value keeps its appearance synchronized with the caption.
-        Box(
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer { alpha = revealProgress.value }
-                .background(ByeSmoSplashBackgroundGradient),
-        )
+        // Retain the gradient for later experiments, but do not draw it while disabled.
+        if (EnableSplashGradient) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = revealProgress.value }
+                    .background(ByeSmoSplashBackgroundGradient),
+            )
+        }
 
         // Keep the system icon's original canvas and center for the first frame.
         // Render-layer scaling avoids constraining its transparent padding to screen width.
