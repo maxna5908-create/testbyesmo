@@ -87,12 +87,13 @@ class MainActivity : ComponentActivity() {
 
     private fun handleSplashExit(provider: SplashScreenViewProvider) {
         if (isFinishing || isDestroyed) return
-        val targetBounds = targetButtonBounds
-        if (targetBounds == null) {
-            pendingSplashProvider = provider
-            return
+        fallbackRunnable?.let {
+            window.decorView.removeCallbacks(it)
+            fallbackRunnable = null
         }
-        executeTransition(provider, targetBounds)
+        provider.remove()
+        configureByeSmoSplashWindow()
+        introReady = true
     }
 
     private fun onButtonPositioned(bounds: ComposeRect) {

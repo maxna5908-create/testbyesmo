@@ -50,7 +50,7 @@ private const val WordmarkScale = 0.8f
  */
 @Composable
 fun ByeSmoSplashScreen(
-    @DrawableRes buttonResource: Int,
+    @DrawableRes buttonResource: Int = 0,
     @DrawableRes wordmarkResource: Int,
     tagline: String,
     captionTypeface: Typeface,
@@ -74,8 +74,8 @@ fun ByeSmoSplashScreen(
             }
             if (captionAlpha.value < 1f) {
                 delay(40)
-                captionAlpha.animateTo(1f, tween(180))
             }
+            captionAlpha.animateTo(1f, tween(180))
         }
     }
 
@@ -97,81 +97,41 @@ fun ByeSmoSplashScreen(
             // Width is 1162/1200; center offset is -1/1200.
             val visibleWordmarkWidth = wordmarkWidth * 1162f / 1200f
             val visibleWordmarkCenterOffset = -wordmarkWidth / 1200f
-            val buttonSlotSize = (232f * scale).dp
             val captionBoxHeight = 26.4f * scale * WordmarkScale
-            val textShiftYDp = (-22.28f * scale).dp
 
-            // Anchored on the button center matching the system splash icon center:
-            val systemButtonCenterY = maxHeight.value / 2f
-            val buttonCenterYInsideGroup = 116f * scale
-            val groupTopDp = SplashAlignmentMath.groupTop(
-                systemButtonCenterYInParent = systemButtonCenterY,
-                buttonCenterYInsideGroup = buttonCenterYInsideGroup,
-            ).dp
-
+            // Centered vertically and horizontally:
             Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .offset(y = groupTopDp),
+                modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // Button slot: preserves original UI layout slot and center before resizing.
-                // Inner Image matches the system button size, centered within the slot.
+                // Brand logo slot reserved: displays at 80% (20% smaller) centered in place.
                 Box(
-                    modifier = Modifier.size(buttonSlotSize),
+                    modifier = Modifier.size(baseWordmarkWidth.dp, baseWordmarkHeight.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Image(
-                        painter = painterResource(buttonResource),
-                        contentDescription = null,
+                        painter = painterResource(wordmarkResource),
+                        contentDescription = "byesmo",
                         contentScale = ContentScale.Fit,
-                        alpha = 1f,
-                        modifier = Modifier
-                            .size(buttonSideDp.dp)
-                            .onGloballyPositioned { coordinates ->
-                                if (coordinates.isAttached) {
-                                    onButtonPositioned?.invoke(coordinates.boundsInWindow())
-                                }
-                            },
+                        alpha = logoAlpha.value,
+                        modifier = Modifier.size(wordmarkWidth.dp, wordmarkHeight.dp),
                     )
                 }
-
-                // Text block with equal visible gaps:
-                // gap(buttonBodyBottom -> logoVisibleTop) == gap(logoVisibleBottom -> captionVisibleTop) == G
-                Column(
-                    modifier = Modifier.offset(y = textShiftYDp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                Spacer(Modifier.height((10f * scale).dp))
+                // Tagline slot reserved: fitted to the 80% visible wordmark width, strictly white.
+                Box(
+                    modifier = Modifier.size(baseWordmarkWidth.dp, (26.4f * scale).dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Spacer(Modifier.height((4f * scale).dp))
-                    // Brand logo slot reserved: displays at 80% (20% smaller) centered in place.
-                    Box(
-                        modifier = Modifier.size(baseWordmarkWidth.dp, baseWordmarkHeight.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Image(
-                            painter = painterResource(wordmarkResource),
-                            contentDescription = "byesmo",
-                            contentScale = ContentScale.Fit,
-                            alpha = logoAlpha.value,
-                            modifier = Modifier.size(wordmarkWidth.dp, wordmarkHeight.dp),
-                        )
-                    }
-                    Spacer(Modifier.height((10f * scale).dp))
-                    // Tagline slot reserved: fitted to the 80% visible wordmark width, strictly white.
-                    Box(
-                        modifier = Modifier.size(baseWordmarkWidth.dp, (26.4f * scale).dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        FittedTagline(
-                            value = tagline,
-                            typeface = captionTypeface,
-                            alpha = captionAlpha.value,
-                            modifier = Modifier
-                                .offset(x = visibleWordmarkCenterOffset.dp)
-                                .width(visibleWordmarkWidth.dp)
-                                .height(captionBoxHeight.dp),
-                        )
-                    }
+                    FittedTagline(
+                        value = tagline,
+                        typeface = captionTypeface,
+                        alpha = captionAlpha.value,
+                        modifier = Modifier
+                            .offset(x = visibleWordmarkCenterOffset.dp)
+                            .width(visibleWordmarkWidth.dp)
+                            .height(captionBoxHeight.dp),
+                    )
                 }
             }
         }
