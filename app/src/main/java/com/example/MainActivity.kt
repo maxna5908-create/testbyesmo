@@ -175,6 +175,10 @@ class MainActivity : ComponentActivity() {
                 }
             })
         }
+        // Layout is ready: the animation completion callback now owns the handoff.
+        // A fixed watchdog must not interrupt a slow animation (system duration scale).
+        fallbackRunnable?.let { window.decorView.removeCallbacks(it) }
+        fallbackRunnable = null
         transitionAnimator = animator
         animator.start()
     }

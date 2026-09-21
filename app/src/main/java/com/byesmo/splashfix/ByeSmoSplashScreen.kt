@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -36,6 +37,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.text
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 val ByeSmoSplashBackground = Color(0xFF292D32)
 
@@ -59,6 +61,7 @@ private const val WordmarkVisibleWidthDp = 145.16869f
 private const val WordmarkVisibleCenterXDp = 143.86113f
 private const val WordmarkVisibleBottomDp = 163.75929f
 private const val CaptionRevealDurationMs = 450
+private const val CaptionPauseAfterBrandMs = 80L
 
 /**
  * Full-window first screen, drawn inside the real launcher Activity.
@@ -82,11 +85,20 @@ fun ByeSmoSplashScreen(
     val revealProgress = remember { Animatable(if (introReady) 1f else 0f) }
 
     LaunchedEffect(introReady, animationsEnabled) {
-        if (!introReady) return@LaunchedEffect
+        if (!introReady) {
+            revealProgress.snapTo(0f)
+            return@LaunchedEffect
+        }
+        if (revealProgress.value >= 1f) return@LaunchedEffect
         if (!animationsEnabled) {
             revealProgress.snapTo(1f)
         } else {
-            // The system overlay has already resized the logo. Only reveal the caption.
+            // introReady is released only after the system logo animation ends
+            // and its overlay is removed. Cross a rendered frame boundary so the
+            // final static brand is visible before starting the caption.
+            withFrameNanos { }
+            withFrameNanos { }
+            delay(CaptionPauseAfterBrandMs)
             revealProgress.animateTo(
                 1f,
                 tween(
