@@ -1,5 +1,14 @@
 <resources>
     <string name="app_name">byesmo</string>
     <string name="tagline">выключи тягу курить</string>
-    <string name="power_button_cd">Кнопка выключения тяги курить</string>
+    <string name="intro_title_1">Твой путь без сигарет</string>
+    <string name="intro_body_1">Начни с решения, которое подходит именно тебе.</string>
+    <string name="intro_title_2">Замечай привычки</string>
+    <string name="intro_body_2">Обращай внимание на ситуации, в которых хочется закурить.</string>
+    <string name="intro_title_3">Двигайся шаг за шагом</string>
+    <string name="intro_body_3">Каждый небольшой шаг имеет значение.</string>
+    <string name="intro_next">Далее</string>
+    <string name="intro_start">Начать</string>
+    <string name="welcome_title">Добро пожаловать</string>
+    <string name="welcome_body">выключи тягу курить</string>
 </resources>

@@ -10,9 +10,9 @@
 
     <style name="Theme.ByeSmoV3.Starting.Base" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/byesmo_v3_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/byesmo_splash_icon</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/byesmo_splash_empty</item>
         <item name="postSplashScreenTheme">@style/Theme.ByeSmoV3.PostSplash</item>
-        <item name="android:windowBackground">@drawable/byesmo_start_window_v4</item>
+        <item name="android:windowBackground">@color/byesmo_v3_background</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

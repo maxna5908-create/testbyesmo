@@ -21,8 +21,8 @@ class GreetingScreenshotTest {
 
   @Test
   fun splash_screenshot() {
-    composeTestRule.setContent { MyApplicationTheme { SplashScreen() } }
+    composeTestRule.setContent { MyApplicationTheme { SplashScreenPreview() } }
 
-    composeTestRule.onRoot().captureRoboImage(filePath = "src/test/screenshots/greeting.png")
+    composeTestRule.onRoot().captureRoboImage(filePath = "build/reports/splash/settled.png")
   }
 }

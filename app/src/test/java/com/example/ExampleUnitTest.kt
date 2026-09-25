@@ -1,53 +1,39 @@
 package com.example
 
-import com.example.splash.SplashAlignmentMath
+import com.example.splash.SplashMotion
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExampleUnitTest {
-  @Test
-  fun testCenteredButtonGroupAnchor() {
-    val windowHeight = 800f
-    val scale = 1.0f
-    val systemButtonCenterY = windowHeight / 2f // 400f
-    val buttonSlotSize = 232f * scale
-    val buttonCenterYInsideGroup = buttonSlotSize / 2f // 116f
+    @Test fun captionNeverOverlapsUnfolding() {
+        for (time in 0..800) {
+            assertEquals(0f, SplashMotion.progress(time.toFloat(), SplashMotion.CAPTION_START_MS,
+                SplashMotion.CAPTION_MS), 0f)
+        }
+        assertEquals(1f, SplashMotion.progress(1450f, SplashMotion.CAPTION_START_MS,
+            SplashMotion.CAPTION_MS), 0f)
+        assertTrue(SplashMotion.EXIT_START_MS > 1450)
+    }
 
-    val groupTop = SplashAlignmentMath.groupTop(
-      systemButtonCenterYInParent = systemButtonCenterY,
-      buttonCenterYInsideGroup = buttonCenterYInsideGroup,
-    )
+    @Test fun assembledInkIsExactlySixtyPercentAndCenteredOnEveryScreen() {
+        for (width in listOf(320f, 1080f, 1440f, 2560f)) {
+            val scale = width * 0.6f / SplashMotion.INK_WIDTH
+            val left = width / 2f - SplashMotion.CENTER_X * scale
+            val inkLeft = left + SplashMotion.INK_LEFT * scale
+            val inkRight = left + SplashMotion.INK_RIGHT * scale
+            assertEquals(width * 0.6f, inkRight - inkLeft, 0.001f)
+            assertEquals(width / 2f, (inkLeft + inkRight) / 2f, 0.001f)
+            val initialByeCenter = left + (SplashMotion.BYE_CENTER_X + SplashMotion.TRAVEL) * scale
+            assertEquals(width / 2f, initialByeCenter, 0.001f)
+        }
+    }
 
-    // Verify groupTop places the button center exactly at systemButtonCenterY
-    val actualButtonCenterY = groupTop + buttonCenterYInsideGroup
-    assertEquals(systemButtonCenterY, actualButtonCenterY, 0.0001f)
-
-    // Test compositionShiftY formula:
-    val oldButtonCenterY = 345f // previous higher position
-    val shiftY = SplashAlignmentMath.compositionShiftY(systemButtonCenterY, oldButtonCenterY)
-    assertEquals(55f, shiftY, 0.0001f)
-    assertEquals(systemButtonCenterY, oldButtonCenterY + shiftY, 0.0001f)
-  }
-
-  @Test
-  fun testSplashButtonTarget() {
-    val renderedCanvasSide = 576f // e.g. 288dp * 2 density
-    val systemCenterX = 540f
-    val systemCenterY = 1200f
-
-    val target = SplashAlignmentMath.target(
-      renderedSystemCanvasSidePx = renderedCanvasSide,
-      systemButtonCenterXScreenPx = systemCenterX,
-      systemButtonCenterYScreenPx = systemCenterY,
-    )
-
-    assertEquals(systemCenterX, target.centerX, 0.0001f)
-    assertEquals(systemCenterY, target.centerY, 0.0001f)
-    // side = 576 * 192 / 288 = 384
-    assertEquals(384f, target.imageSide, 0.0001f)
-    // bodyDiameter = 384 * 856 / 1024 = 321
-    assertEquals(321f, target.bodyDiameter, 0.0001f)
-    assertEquals(target.centerX - target.imageSide / 2f, target.imageLeft, 0.0001f)
-    assertEquals(target.centerY - target.imageSide / 2f, target.imageTop, 0.0001f)
-  }
+    @Test fun smoStartsFullyBehindTheMovingClipAndFinishesAtOriginalPosition() {
+        assertEquals(SplashMotion.BYE_INK_RIGHT + SplashMotion.TRAVEL,
+            SplashMotion.INK_RIGHT - SplashMotion.TRAVEL, 0f)
+        assertEquals(0f, SplashMotion.progress(-100f, 0, SplashMotion.GROW_MS), 0f)
+        assertEquals(1f, SplashMotion.progress(10000f, SplashMotion.EXIT_START_MS,
+            SplashMotion.EXIT_MS), 0f)
+    }
 }

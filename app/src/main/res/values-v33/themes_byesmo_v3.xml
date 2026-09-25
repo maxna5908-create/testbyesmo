@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Merge into app/src/main/res/values-v33/themes_byesmo_v3.xml. -->
 <resources>
     <style name="Theme.ByeSmoV3.Starting" parent="Theme.ByeSmoV3.Starting.Base">
         <item name="android:windowSplashScreenBackground">@color/byesmo_v3_background</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/byesmo_splash_animated</item>
-        <item name="android:windowSplashScreenAnimationDuration">200</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/byesmo_splash_empty</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
         <item name="android:windowBackground">@color/byesmo_v3_background</item>
         <item name="android:windowSplashScreenBehavior">icon_preferred</item>
     </style>
