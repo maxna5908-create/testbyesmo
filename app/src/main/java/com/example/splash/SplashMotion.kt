@@ -18,11 +18,8 @@ object SplashMotion {
     const val GROW_MS = 300L
     const val UNFOLD_MS = 500L
     const val CAPTION_MS = 650L
-    const val HOLD_MS = 200L
-    const val EXIT_MS = 250L
     const val CAPTION_START_MS = GROW_MS + UNFOLD_MS
-    const val EXIT_START_MS = CAPTION_START_MS + CAPTION_MS + HOLD_MS
-    const val TOTAL_MS = EXIT_START_MS + EXIT_MS
+    const val TOTAL_MS = CAPTION_START_MS + CAPTION_MS
 
     fun progress(timeMs: Float, startMs: Long, durationMs: Long): Float =
         ((timeMs - startMs) / durationMs).coerceIn(0f, 1f)

@@ -13,6 +13,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.view.View
+import android.view.MotionEvent
 import android.view.animation.LinearInterpolator
 import android.view.animation.PathInterpolator
 import androidx.core.content.res.ResourcesCompat
@@ -49,9 +50,9 @@ class BrandSplashView(
     private val tagline: String,
     private val animationsEnabled: Boolean,
     private val preview: Boolean = false,
-    previewTimeMs: Long = SplashMotion.EXIT_START_MS,
+    previewTimeMs: Long = SplashMotion.TOTAL_MS,
+    initiallySettled: Boolean = false,
 ) : View(context) {
-    var onFinished: (() -> Unit)? = null
     private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
         color = Color.WHITE
@@ -64,8 +65,13 @@ class BrandSplashView(
     private val fade = PathInterpolator(0.42f, 0f, 0.58f, 1f)
     private var animator: ValueAnimator? = null
     private var playRequested = false
-    private var finished = false
-    private var elapsedMs = if (preview) previewTimeMs.toFloat() else 0f
+    private var finished = initiallySettled
+    private var elapsedMs = when {
+        preview -> previewTimeMs.toFloat()
+        initiallySettled -> SplashMotion.TOTAL_MS.toFloat()
+        else -> 0f
+    }
+    private val logoHitBounds = RectF()
     private var logoScale = 1f
     private var logoLeft = 0f
     private var logoTop = 0f
@@ -73,10 +79,39 @@ class BrandSplashView(
     private var captionBaseline = 0f
 
     init {
-        // Consume touches until the overlay disappears. Destination semantics are hidden too.
         isClickable = true
-        contentDescription = "byesmo. $tagline"
+        isFocusable = true
+        contentDescription = "byesmo. $tagline. Нажмите, чтобы повторить анимацию"
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_YES
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        val insideLogo = logoHitBounds.contains(event.x, event.y)
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                if (!finished || !insideLogo) return false
+                isPressed = true
+            }
+            MotionEvent.ACTION_MOVE -> if (!insideLogo) isPressed = false
+            MotionEvent.ACTION_UP -> {
+                val clicked = isPressed && insideLogo
+                isPressed = false
+                if (clicked) performClick()
+            }
+            MotionEvent.ACTION_CANCEL, MotionEvent.ACTION_POINTER_DOWN -> isPressed = false
+        }
+        return true
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        if (!preview && finished && animationsEnabled) {
+            finished = false
+            elapsedMs = 0f
+            invalidate()
+            play()
+        }
+        return true
     }
 
     fun play() {
@@ -108,11 +143,12 @@ class BrandSplashView(
     private fun finish() {
         if (finished) return
         finished = true
-        onFinished?.invoke()
+        elapsedMs = SplashMotion.TOTAL_MS.toFloat()
+        animator = null
+        invalidate()
     }
 
     fun dispose() {
-        onFinished = null
         animator?.removeAllListeners()
         animator?.removeAllUpdateListeners()
         animator?.cancel()
@@ -144,6 +180,12 @@ class BrandSplashView(
         logoScale = w * 0.6f / SplashMotion.INK_WIDTH
         logoLeft = w / 2f - SplashMotion.CENTER_X * logoScale
         logoTop = h / 2f - (SplashMotion.INK_TOP + SplashMotion.INK_BOTTOM) / 2f * logoScale
+        logoHitBounds.set(
+            logoLeft + SplashMotion.INK_LEFT * logoScale,
+            logoTop + SplashMotion.INK_TOP * logoScale,
+            logoLeft + SplashMotion.INK_RIGHT * logoScale,
+            logoTop + SplashMotion.INK_BOTTOM * logoScale,
+        )
         // Fit actual glyph bounds uniformly to the visible brand width; never stretch text.
         captionPaint.textSize = 1000f
         captionPaint.getTextBounds(tagline, 0, tagline.length, captionBounds)
@@ -160,10 +202,9 @@ class BrandSplashView(
         val grow = movement.getInterpolation(SplashMotion.progress(elapsedMs, 0, SplashMotion.GROW_MS))
         val unfold = movement.getInterpolation(SplashMotion.progress(elapsedMs, SplashMotion.GROW_MS, SplashMotion.UNFOLD_MS))
         val caption = fade.getInterpolation(SplashMotion.progress(elapsedMs, SplashMotion.CAPTION_START_MS, SplashMotion.CAPTION_MS))
-        val opacity = 1f - fade.getInterpolation(SplashMotion.progress(elapsedMs, SplashMotion.EXIT_START_MS, SplashMotion.EXIT_MS))
-        canvas.drawColor(Color.argb((255 * opacity).toInt(), 41, 45, 50))
+        canvas.drawColor(Color.rgb(41, 45, 50))
 
-        bitmapPaint.alpha = (255 * grow * opacity).toInt()
+        bitmapPaint.alpha = (255 * grow).toInt()
         val shift = SplashMotion.TRAVEL * (1f - unfold)
         val frame = canvas.save()
         // Growth is centered on the screen. Unfolding starts only after growth completes.
@@ -185,7 +226,7 @@ class BrandSplashView(
         canvas.restoreToCount(frame)
 
         if (caption > 0f) {
-            captionPaint.alpha = (255 * caption * opacity).toInt()
+            captionPaint.alpha = (255 * caption).toInt()
             canvas.drawText(tagline, captionX, captionBaseline, captionPaint)
         }
     }

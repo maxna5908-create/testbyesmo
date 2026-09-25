@@ -2,9 +2,7 @@ package com.example
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -20,15 +18,14 @@ fun SplashScreen(
     start: Boolean,
     animationsEnabled: Boolean = true,
     preview: Boolean = false,
-    onFinished: () -> Unit = {},
+    initiallySettled: Boolean = false,
 ) {
-    val onComplete by rememberUpdatedState(onFinished)
     val tagline = stringResource(R.string.byesmo_v3_tagline)
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
-            BrandSplashView(context, assets, tagline, animationsEnabled, preview)
-                .apply { this.onFinished = { onComplete() } }
+            BrandSplashView(context, assets, tagline, animationsEnabled, preview,
+                initiallySettled = initiallySettled)
         },
         onRelease = { it.dispose() },
         update = { if (start) it.play() },

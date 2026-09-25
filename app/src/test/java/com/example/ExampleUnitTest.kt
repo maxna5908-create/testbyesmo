@@ -2,7 +2,6 @@ package com.example
 
 import com.example.splash.SplashMotion
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ExampleUnitTest {
@@ -13,7 +12,7 @@ class ExampleUnitTest {
         }
         assertEquals(1f, SplashMotion.progress(1450f, SplashMotion.CAPTION_START_MS,
             SplashMotion.CAPTION_MS), 0f)
-        assertTrue(SplashMotion.EXIT_START_MS > 1450)
+        assertEquals(1450L, SplashMotion.TOTAL_MS)
     }
 
     @Test fun assembledInkIsExactlySixtyPercentAndCenteredOnEveryScreen() {
@@ -33,7 +32,7 @@ class ExampleUnitTest {
         assertEquals(SplashMotion.BYE_INK_RIGHT + SplashMotion.TRAVEL,
             SplashMotion.INK_RIGHT - SplashMotion.TRAVEL, 0f)
         assertEquals(0f, SplashMotion.progress(-100f, 0, SplashMotion.GROW_MS), 0f)
-        assertEquals(1f, SplashMotion.progress(10000f, SplashMotion.EXIT_START_MS,
-            SplashMotion.EXIT_MS), 0f)
+        assertEquals(1f, SplashMotion.progress(10000f, SplashMotion.CAPTION_START_MS,
+            SplashMotion.CAPTION_MS), 0f)
     }
 }
