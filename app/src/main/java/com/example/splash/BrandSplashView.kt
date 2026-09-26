@@ -193,7 +193,7 @@ class BrandSplashView(
         captionPaint.getTextBounds(tagline, 0, tagline.length, captionBounds)
         captionX = (w - captionBounds.width()) / 2f - captionBounds.left
         captionBaseline = logoTop + SplashMotion.INK_BOTTOM * logoScale +
-            12f * resources.displayMetrics.density - captionBounds.top
+            24f * resources.displayMetrics.density - captionBounds.top
         startIfReady()
     }
 

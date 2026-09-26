@@ -15,9 +15,9 @@ object SplashMotion {
     const val BYE_CENTER_X = (INK_LEFT + BYE_INK_RIGHT) / 2f
     const val TRAVEL = CENTER_X - BYE_CENTER_X
 
-    const val GROW_MS = 300L
-    const val UNFOLD_MS = 500L
-    const val CAPTION_MS = 650L
+    const val GROW_MS = 600L
+    const val UNFOLD_MS = 1000L
+    const val CAPTION_MS = 1300L
     const val CAPTION_START_MS = GROW_MS + UNFOLD_MS
     const val TOTAL_MS = CAPTION_START_MS + CAPTION_MS
 

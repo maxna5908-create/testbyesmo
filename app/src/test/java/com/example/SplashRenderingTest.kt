@@ -51,7 +51,7 @@ class SplashRenderingTest {
         repeat(2) {
             tap(180f, 390f)
             assertEquals(0, whitePixels(capture(), 0, 780))
-            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(2))
+            shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(4))
             assertTrue(settled.sameAs(capture()))
             assertTrue(view.isAttachedToWindow)
         }
@@ -104,16 +104,16 @@ class SplashRenderingTest {
         for (y in 0 until 780) for (x in 0 until 360) {
             assertEquals(Color.rgb(41, 45, 50), initial.getPixel(x, y))
         }
-        assertEquals(0, whitePixels(frame(150), 0, 780))
+        assertEquals(0, whitePixels(frame(300), 0, 780))
         assertEquals(0, whitePixels(frame(SplashMotion.GROW_MS), 0, 780))
     }
 
     @Test fun taglineAppearsOnlyAfterTheWholeWordAndFinalFrameStaysVisible() {
-        assertTrue(whitePixels(frame(550), 340, 420) > 0)
+        assertTrue(whitePixels(frame(1100), 340, 420) > 0)
         val assembled = frame(SplashMotion.CAPTION_START_MS)
         assertTrue(whitePixels(assembled, 340, 420) > 100)
         assertEquals(0, whitePixels(assembled, 425, 600))
-        assertTrue(whitePixels(frame(1450), 425, 600) > 30)
+        assertTrue(whitePixels(frame(2900), 425, 600) > 30)
         val settled = frame(SplashMotion.TOTAL_MS)
         assertTrue(whitePixels(settled, 340, 420) > 100)
         assertTrue(whitePixels(settled, 425, 600) > 30)

@@ -6,13 +6,13 @@ import org.junit.Test
 
 class ExampleUnitTest {
     @Test fun captionNeverOverlapsUnfolding() {
-        for (time in 0..800) {
+        for (time in 0..1600) {
             assertEquals(0f, SplashMotion.progress(time.toFloat(), SplashMotion.CAPTION_START_MS,
                 SplashMotion.CAPTION_MS), 0f)
         }
-        assertEquals(1f, SplashMotion.progress(1450f, SplashMotion.CAPTION_START_MS,
+        assertEquals(1f, SplashMotion.progress(2900f, SplashMotion.CAPTION_START_MS,
             SplashMotion.CAPTION_MS), 0f)
-        assertEquals(1450L, SplashMotion.TOTAL_MS)
+        assertEquals(2900L, SplashMotion.TOTAL_MS)
     }
 
     @Test fun assembledInkIsExactlySixtyPercentAndCenteredOnEveryScreen() {
