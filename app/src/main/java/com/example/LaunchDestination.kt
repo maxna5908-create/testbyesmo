@@ -19,7 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -32,6 +32,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlin.math.floor
 import kotlin.math.max
@@ -59,7 +60,8 @@ fun LaunchDestination(initiallyComplete: Boolean, onOnboardingComplete: () -> Un
                     Text(buildAnnotatedString {
                         withStyle(SpanStyle(color = BrandRed)) { append("bye") }
                         withStyle(SpanStyle(color = Color.White)) { append("smo") }
-                    }, style = MaterialTheme.typography.titleLarge)
+                    }, modifier = Modifier.align(Alignment.CenterHorizontally),
+                        style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(24.dp))
                     if (complete) {
                         Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.Center) {
@@ -74,14 +76,23 @@ fun LaunchDestination(initiallyComplete: Boolean, onOnboardingComplete: () -> Un
                             pageSpacing = 24.dp) { page ->
                             Column(Modifier.fillMaxSize()) {
                                 Box(Modifier.weight(1f).fillMaxWidth().padding(6.dp)
-                                    .shadow(10.dp, RoundedCornerShape(24.dp),
-                                        ambientColor = Color.Black, spotColor = Color.Black)
+                                    .drawBehind {
+                                        // Inset layers keep the shadow under the panel, with a soft lower edge.
+                                        repeat(16) { layer ->
+                                            val inset = (2f + layer * 0.55f).dp.toPx()
+                                            val drop = (10f - layer * 0.4f).dp.toPx()
+                                            drawRoundRect(Color.Black.copy(alpha = 0.012f),
+                                                topLeft = Offset(inset, drop),
+                                                size = Size((size.width - inset * 2).coerceAtLeast(0f), size.height),
+                                                cornerRadius = CornerRadius(24.dp.toPx()))
+                                        }
+                                    }
                                     .background(Color(0xFF373F47), RoundedCornerShape(24.dp)))
                                 Spacer(Modifier.height(24.dp))
-                                Text(stringResource(titles[page]), color = Color.White,
+                                Text(stringResource(titles[page]), modifier = Modifier.padding(horizontal = 6.dp), color = Color.White,
                                     style = MaterialTheme.typography.headlineMedium)
                                 Spacer(Modifier.height(12.dp))
-                                Text(stringResource(descriptions[page]), color = Color(0xFFD1D3D6),
+                                Text(stringResource(descriptions[page]), modifier = Modifier.padding(horizontal = 6.dp), color = Color(0xFFD1D3D6),
                                     style = MaterialTheme.typography.bodyLarge)
                             }
                         }
@@ -90,7 +101,7 @@ fun LaunchDestination(initiallyComplete: Boolean, onOnboardingComplete: () -> Un
                             pager.settledPage, Modifier.align(Alignment.CenterHorizontally))
                         Spacer(Modifier.height(24.dp))
                         Button(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
                             contentPadding = PaddingValues(18.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = BrandRed, contentColor = Color.White),
                             onClick = {
@@ -104,7 +115,8 @@ fun LaunchDestination(initiallyComplete: Boolean, onOnboardingComplete: () -> Un
                                     }
                                 }
                             },
-                        ) { Text(stringResource(if (pager.currentPage < 2) R.string.intro_next else R.string.intro_start)) }
+                        ) { Text(stringResource(if (pager.currentPage < 2) R.string.intro_next else R.string.intro_start),
+                            fontSize = MaterialTheme.typography.labelLarge.fontSize.value.plus(1f).sp) }
                     }
                 }
             }
