@@ -19,13 +19,14 @@ fun SplashScreen(
     animationsEnabled: Boolean = true,
     preview: Boolean = false,
     initiallySettled: Boolean = false,
+    onFinished: () -> Unit = {},
 ) {
     val tagline = stringResource(R.string.byesmo_v3_tagline)
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
             BrandSplashView(context, assets, tagline, animationsEnabled, preview,
-                initiallySettled = initiallySettled)
+                initiallySettled = initiallySettled, onFinished = onFinished)
         },
         onRelease = { it.dispose() },
         update = { if (start) it.play() },

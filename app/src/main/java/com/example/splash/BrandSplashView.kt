@@ -52,6 +52,7 @@ class BrandSplashView(
     private val preview: Boolean = false,
     previewTimeMs: Long = SplashMotion.TOTAL_MS,
     initiallySettled: Boolean = false,
+    private val onFinished: () -> Unit = {},
 ) : View(context) {
     private val bitmapPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
     private val captionPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
@@ -146,6 +147,7 @@ class BrandSplashView(
         elapsedMs = SplashMotion.TOTAL_MS.toFloat()
         animator = null
         invalidate()
+        onFinished()
     }
 
     fun dispose() {

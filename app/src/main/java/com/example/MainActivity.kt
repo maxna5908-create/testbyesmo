@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -49,13 +50,16 @@ class MainActivity : ComponentActivity() {
             }
             setContent {
                 MyApplicationTheme {
+                    var splashComplete by rememberSaveable { mutableStateOf(savedInstanceState != null || !animationsEnabled) }
                     Box(Modifier.fillMaxSize().background(Color(0xFF292D32))
                         .onGloballyPositioned { contentLaidOut = true }) {
-                        SplashScreen(
+                        if (splashComplete) {
+                            LaunchDestination(initiallyComplete = false, onOnboardingComplete = {})
+                        } else SplashScreen(
                             assets = assets,
                             start = systemSplashGone,
                             animationsEnabled = animationsEnabled,
-                            initiallySettled = savedInstanceState != null,
+                            onFinished = { splashComplete = true },
                         )
                     }
                 }
