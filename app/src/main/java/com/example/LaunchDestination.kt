@@ -44,6 +44,7 @@ private val BrandRed = Color(0xFFFF2B3D)
 @Composable
 fun LaunchDestination(initiallyComplete: Boolean, onOnboardingComplete: () -> Unit) {
     var complete by rememberSaveable { mutableStateOf(initiallyComplete) }
+    if (complete) { com.example.survey.SurveyScreen(); return }
     val pager = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
     val entrance = remember { Animatable(0f) }

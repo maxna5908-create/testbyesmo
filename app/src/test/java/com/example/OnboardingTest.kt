@@ -33,6 +33,6 @@ class OnboardingTest {
         compose.onNodeWithText("Двигайся шаг за шагом").assertIsDisplayed()
         compose.onRoot().captureRoboImage("build/reports/onboarding/slide-3.png")
         compose.onNodeWithText("Начать").performClick()
-        compose.onNodeWithText("Добро пожаловать").assertIsDisplayed()
+        compose.onNodeWithText("Первичный опрос").assertIsDisplayed()
     }
 }

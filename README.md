@@ -30,3 +30,10 @@ The two transparent PNG assets are lossless crops of the original brand artwork.
 See [implementation, timing, source dimensions and device checks](docs/ANIMATED_SPLASH_RU.md).
 This repository is a splash demo: the onboarding and welcome destinations are
 minimal examples, without authentication or production app features.
+
+## Local questionnaire
+
+After onboarding the app opens a seven-page primary questionnaire (15 questions),
+with local Room autosave, resume, validation and a final answers summary.
+No questionnaire data is synchronized or backed up to a server.
+See [questionnaire and storage rules](docs/QUESTIONNAIRE_RU.md).

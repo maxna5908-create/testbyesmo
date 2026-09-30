@@ -54,7 +54,10 @@ class MainActivity : ComponentActivity() {
                     Box(Modifier.fillMaxSize().background(Color(0xFF292D32))
                         .onGloballyPositioned { contentLaidOut = true }) {
                         if (splashComplete) {
-                            LaunchDestination(initiallyComplete = false, onOnboardingComplete = {})
+                            LaunchDestination(
+                                initiallyComplete = getSharedPreferences("byesmo_launch", MODE_PRIVATE).getBoolean("onboarding_complete", false),
+                                onOnboardingComplete = { getSharedPreferences("byesmo_launch", MODE_PRIVATE).edit().putBoolean("onboarding_complete", true).apply() },
+                            )
                         } else SplashScreen(
                             assets = assets,
                             start = systemSplashGone,
